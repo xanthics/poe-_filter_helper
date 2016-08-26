@@ -66,23 +66,6 @@ def genmodlist():
 				buff[t] = []
 			buff[t].append(ii)
 
-	for item in r['BaseItemTypes.dat']:
-
-		implicits = []
-		for mod in item['Implicit_ModsKeys']:
-			translation_result = get_translation(mod, tc)
-			implicits.extend(translation_result.lines)
-		if implicits:
-			for ii in implicits:
-				t = re.sub('-?\d*\.{0,1}\d+--?\d*\.{0,1}\d+|(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)-(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)', '#-#', ii)
-				t = re.sub('%1\$d|-?\d*\.{0,1}\d+|\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+', '#', t)
-				t = re.sub('\+#', '#', t)
-				if t not in temp:
-					temp.append('{}'.format(t))
-				if t not in buff:
-					buff[t] = []
-				buff[t].append(ii)
-
 	with open('mods.txt', 'w') as f:
 		for i in sorted(buff.keys()):
 			f.write("{}: {}\n".format(i, sorted(buff[i])))
@@ -97,7 +80,7 @@ def groupmods():
 	for p, z in enumerate(modlist):
 		for i in modlist[p:]:
 			n = ratio(z, i)
-			if 0.96 < n < 1:
+			if 0.95 < n < 1:
 				print("({:.2f}) {}: {}".format(n, z, i))
 
 if __name__ == "__main__":
