@@ -58,7 +58,7 @@ def genmodlist():
 
 		for ii in translation_result.lines:
 			t = re.sub('-?\d*\.{0,1}\d+--?\d*\.{0,1}\d+|(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)-(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)', '#-#', ii)
-			t = re.sub('-?\d*\.{0,1}\d+|\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+|$d', '#', t)
+			t = re.sub('%1\$d|-?\d*\.{0,1}\d+|\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+', '#', t)
 			t = re.sub('\+#', '#', t)
 			if t not in temp:
 				temp.append('{}'.format(t))
@@ -75,7 +75,7 @@ def genmodlist():
 		if implicits:
 			for ii in implicits:
 				t = re.sub('-?\d*\.{0,1}\d+--?\d*\.{0,1}\d+|(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)-(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)', '#-#', ii)
-				t = re.sub('-?\d*\.{0,1}\d+|\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+|$d', '#', t)
+				t = re.sub('%1\$d|-?\d*\.{0,1}\d+|\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+', '#', t)
 				t = re.sub('\+#', '#', t)
 				if t not in temp:
 					temp.append('{}'.format(t))
@@ -94,16 +94,11 @@ def groupmods():
 	with open('temp.txt', 'rb') as f:
 		modlist = pickle.load(f)
 
-	dist = {}
-	for i in modlist:
-		n = distance(modlist[0], i)
-		if n in dist:
-			dist[n].append(i)
-		else:
-			dist[n] = [i]
-
-	for i in sorted(dist):
-		print("{}: {}".format(i, dist[i]))
+	for p, z in enumerate(modlist):
+		for i in modlist[p:]:
+			n = distance(z, i)
+			if 0 < n < 3:
+				print("({}) {}: {}".format(n, z, i))
 
 if __name__ == "__main__":
 	genmodlist()
