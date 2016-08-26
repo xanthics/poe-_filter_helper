@@ -28,9 +28,9 @@ from PyPoE.poe.file.dat import RelationalReader
 from PyPoE.poe.file.translations import TranslationFileCache
 from PyPoE.poe.file.ggpk import GGPKFile
 from PyPoE.poe.sim import mods
+from PyPoE.poe.sim.mods import get_translation
 import pickle
 from Levenshtein import distance
-from string import digits
 import re
 
 def genmodlist():
@@ -57,18 +57,32 @@ def genmodlist():
 		translation_result = mods.get_translation(i, tc)
 
 		for ii in translation_result.lines:
-			t = re.sub('(-|\+)?\d*\.{0,1}\d+-(-|\+)?\d*\.{0,1}\d+|'
-					   '(\((-|\+)?\d*\.{0,1}\d+ to (-|\+)?\d*\.{0,1}\d+\)|(-|\+)?\d*\.{0,1}\d+)-(\((-|\+)?\d*\.{0,1}\d+ to (-|\+)?\d*\.{0,1}\d+\)|(-|\+)?\d*\.{0,1}\d+)', '#-#', ii)
-			t = re.sub('(-|\+)?\d*\.{0,1}\d+|\((-|\+)?\d*\.{0,1}\d+ to (-|\+)?\d*\.{0,1}\d+\)|(-|\+)?\d*\.{0,1}\d+ to (-|\+)?\d*\.{0,1}\d+|$d', '#', t)
-#			t = re.sub('(\d)+|\((\d)+ to (\d)+\)|\((\d)+-(\d)+\)', '#', ii)
-			#t = re.sub('\(# to #\)', '#', t)
-#			if t not in temp:
-			temp.append('{}'.format(t))
+			t = re.sub('-?\d*\.{0,1}\d+--?\d*\.{0,1}\d+|(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)-(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)', '#-#', ii)
+			t = re.sub('-?\d*\.{0,1}\d+|\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+|$d', '#', t)
+			t = re.sub('\+#', '#', t)
+			if t not in temp:
+				temp.append('{}'.format(t))
 			if t not in buff:
 				buff[t] = []
 			buff[t].append(ii)
 
-#		buff.append('{}: {}'.format(i['CorrectGroup'], translation_result.lines))
+	for item in r['BaseItemTypes.dat']:
+
+		implicits = []
+		for mod in item['Implicit_ModsKeys']:
+			translation_result = get_translation(mod, tc)
+			implicits.extend(translation_result.lines)
+		if implicits:
+			for ii in implicits:
+				t = re.sub('-?\d*\.{0,1}\d+--?\d*\.{0,1}\d+|(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)-(\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+)', '#-#', ii)
+				t = re.sub('-?\d*\.{0,1}\d+|\(-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+\)|-?\d*\.{0,1}\d+ to -?\d*\.{0,1}\d+|$d', '#', t)
+				t = re.sub('\+#', '#', t)
+				if t not in temp:
+					temp.append('{}'.format(t))
+				if t not in buff:
+					buff[t] = []
+				buff[t].append(ii)
+
 	with open('mods.txt', 'w') as f:
 		for i in sorted(buff.keys()):
 			f.write("{}: {}\n".format(i, sorted(buff[i])))
