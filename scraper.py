@@ -35,15 +35,27 @@ def get_stashes():
 
 	data = req.json(encoding='utf-8')
 
+	keys = {}
 	for i in data:
 		if 'stashes' == i:
 			for ii in data[i]:
 	#			print("{}".format(ii))
 				if 'items' in ii and ii['items']:
 					for iii in ii['items']:
-						print(iii)
+						if iii['frameType'] in [3, 6]:
+							note = ""
+							if 'note' in iii and ('~b/o' in iii['note'] or '~price' in iii['note']):
+								note = iii['note']
+							elif 'stash' in ii and ('~b/o' in ii['stash'] or '~price' in ii['stash']):
+								note = "tab {}".format(ii['stash'])
+								keys[ii['stash']] = True
+							if note:
+								print("{} {} {}".format(iii['typeLine'], iii['league'], note))
 		else:
 			print("{}: {}".format(i, data[i]))
+	for i in keys.keys():
+		print(i)
+
 
 if __name__ == "__main__":
 	get_stashes()

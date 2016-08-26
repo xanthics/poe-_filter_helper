@@ -28,7 +28,10 @@ from PyPoE.poe.file.dat import RelationalReader
 from PyPoE.poe.file.translations import TranslationFileCache
 from PyPoE.poe.file.ggpk import GGPKFile
 from PyPoE.poe.sim import mods
-
+import pickle
+from Levenshtein import distance
+from string import digits
+import re
 
 def genmodlist():
 	path = GGPKFile()
@@ -48,13 +51,46 @@ def genmodlist():
 
 	tc = TranslationFileCache(path_or_ggpk=path)
 
-	buff = []
+	buff = {}
+	temp = []
 	for i in r['Mods.dat']:
 		translation_result = mods.get_translation(i, tc)
-		buff.append('{}: {}'.format(i['CorrectGroup'], translation_result.lines))
-	with open('mods.txt', 'w') as f:
-		f.write("\n".join(sorted(buff)))
 
+		for ii in translation_result.lines:
+			t = re.sub('(-|\+)?\d*\.{0,1}\d+-(-|\+)?\d*\.{0,1}\d+|'
+					   '(\((-|\+)?\d*\.{0,1}\d+ to (-|\+)?\d*\.{0,1}\d+\)|(-|\+)?\d*\.{0,1}\d+)-(\((-|\+)?\d*\.{0,1}\d+ to (-|\+)?\d*\.{0,1}\d+\)|(-|\+)?\d*\.{0,1}\d+)', '#-#', ii)
+			t = re.sub('(-|\+)?\d*\.{0,1}\d+|\((-|\+)?\d*\.{0,1}\d+ to (-|\+)?\d*\.{0,1}\d+\)|(-|\+)?\d*\.{0,1}\d+ to (-|\+)?\d*\.{0,1}\d+|$d', '#', t)
+#			t = re.sub('(\d)+|\((\d)+ to (\d)+\)|\((\d)+-(\d)+\)', '#', ii)
+			#t = re.sub('\(# to #\)', '#', t)
+#			if t not in temp:
+			temp.append('{}'.format(t))
+			if t not in buff:
+				buff[t] = []
+			buff[t].append(ii)
+
+#		buff.append('{}: {}'.format(i['CorrectGroup'], translation_result.lines))
+	with open('mods.txt', 'w') as f:
+		for i in sorted(buff.keys()):
+			f.write("{}: {}\n".format(i, sorted(buff[i])))
+	with open('temp.txt', 'wb') as f:
+		pickle.dump(temp, f)
+
+
+def groupmods():
+	with open('temp.txt', 'rb') as f:
+		modlist = pickle.load(f)
+
+	dist = {}
+	for i in modlist:
+		n = distance(modlist[0], i)
+		if n in dist:
+			dist[n].append(i)
+		else:
+			dist[n] = [i]
+
+	for i in sorted(dist):
+		print("{}: {}".format(i, dist[i]))
 
 if __name__ == "__main__":
 	genmodlist()
+	groupmods()
