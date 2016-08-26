@@ -30,7 +30,7 @@ from PyPoE.poe.file.ggpk import GGPKFile
 from PyPoE.poe.sim import mods
 from PyPoE.poe.sim.mods import get_translation
 import pickle
-from Levenshtein import distance
+from Levenshtein import distance, ratio
 import re
 
 def genmodlist():
@@ -96,9 +96,9 @@ def groupmods():
 
 	for p, z in enumerate(modlist):
 		for i in modlist[p:]:
-			n = distance(z, i)
-			if 0 < n < 3:
-				print("({}) {}: {}".format(n, z, i))
+			n = ratio(z, i)
+			if 0.96 < n < 1:
+				print("({:.2f}) {}: {}".format(n, z, i))
 
 if __name__ == "__main__":
 	genmodlist()
