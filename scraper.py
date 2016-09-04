@@ -22,24 +22,76 @@
 Author: Jeremy Parks
 Purpose: Get GGG stashtab data and store in local db
 Note: Requires Python 3.5.x
+      Database opens a new connection and writes after each page is retrieved as
+      TinyDB documentation doesn't indicated when the data is written to disk
 '''
 
 import requests
+from tinydb import TinyDB, Query
+import re
 
 
-def get_stashes():
+#  Print all leagues in database
+def leagues():
+	with TinyDB('stashcache.json') as db:
+		q = Query()
+		#  Print Leagues
+		league = []
+		while True:
+			if league:
+				val = db.get(~ q.league.matches('|'.join(league)) & q.league.exists())
+			else:
+				val = db.get(q.league.exists())
+			if not val:
+				break
+			league.append(val['league'])
+		print(league)
 
-	url = 'https://www.pathofexile.com/api/public-stash-tabs'
 
+# Add current data to the db
+def adddata(nextchange, remove, add):
+	with TinyDB('stashcache.json') as db:
+		q = Query()
+
+		# Update Next ID
+		if db.search(q.key.exists()):
+			db.update({'next': nextchange}, q.key == 'nextid')
+		else:
+			db.insert({'key': 'nextid', 'next': nextchange})
+
+		# Remove items that have a stash tab that matches this update
+		for i in remove:
+			db.remove(q.tabid == i)
+
+		# Insert our new data
+		for i in add:
+			db.insert(i)
+
+
+def get_stashes(start=None):
+	if not start:
+		with TinyDB('stashcache.json') as db:
+			q = Query()
+			if db.search(q.key.exists()):
+				start = db.get(q.key.exists())['next']
+
+	if start:
+		url = 'https://www.pathofexile.com/api/public-stash-tabs?id={}'.format(start)
+	else:
+		url = 'https://www.pathofexile.com/api/public-stash-tabs'
+
+	print("Starting {}".format(url))
 	req = requests.get(url)
 
 	data = req.json(encoding='utf-8')
 
+	nextchange = ""
+	remove = []
+	add = []
 	keys = {}
 	for i in data:
 		if 'stashes' == i:
 			for ii in data[i]:
-	#			print("{}".format(ii))
 				if 'items' in ii and ii['items']:
 					for iii in ii['items']:
 						if iii['frameType'] in [3, 6]:
@@ -47,15 +99,39 @@ def get_stashes():
 							if 'note' in iii and ('~b/o' in iii['note'] or '~price' in iii['note']):
 								note = iii['note']
 							elif 'stash' in ii and ('~b/o' in ii['stash'] or '~price' in ii['stash']):
-								note = "tab {}".format(ii['stash'])
+								note = ii['stash']
 								keys[ii['stash']] = True
 							if note:
-								print("{} {} {}".format(iii['typeLine'], iii['league'], note))
+								if ii['id'] not in remove:
+									remove.append(ii['id'])
+								price = re.match(r'(~b/o|~price) (-?\d*(\.\d+)?) (vaal|jew|chrom|alt|jewel|chance|chisel|cartographer|fuse|fusing|alch|scour|blessed|chaos|regret|regal|gcp|gemcutter|divine|exalted|exa|ex|mirror)', note.lower())
+								if price:
+									if float(price.group(2)) > 0:
+										unit = price.group(4)
+										if unit in ['exalted', 'exa', 'ex']:
+											unit = 'exa'
+										elif unit in ['fuse', 'fusing']:
+											unit = 'fuse'
+										add.append({'type': iii['frameType'], 'league': iii['league'], 'base': iii['typeLine'], 'cost': price.group(2), 'unit': unit, 'tabid': ii['id'], 'ids': iii['id']})
+								else:
+									with open('erroritems.txt', 'a') as f:
+										f.write("{} *** {}\n".format(note, {'type': iii['frameType'], 'league': iii['league'], 'base': iii['typeLine'], 'tabid': ii['id'], 'ids': iii['id']}))
 		else:
-			print("{}: {}".format(i, data[i]))
-	for i in keys.keys():
-		print(i)
+			nextchange = data[i]
+
+	adddata(nextchange, remove, add)
+	return nextchange
 
 
 if __name__ == "__main__":
-	get_stashes()
+
+	nc = get_stashes()
+
+	oldnc = nc
+	while True:
+		nc = get_stashes(nc)
+		if oldnc == nc:
+			break
+		oldnc = nc
+
+	leagues()
